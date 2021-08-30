@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Dynamic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,6 +13,8 @@ public class PlayerDragonController : MonoBehaviour
 
     private GameObject CPUDragon;
     private Rigidbody CPUDragonRigidbody;
+    private CPUDragonController CPUDragonObject;
+
     private Vector2 startPointOfLine;
     private Vector2 endPointOfLine;
     private Vector2 burstDirection; //vector to hold the players animal jump direction
@@ -32,10 +33,51 @@ public class PlayerDragonController : MonoBehaviour
     private Transform animalTransform; //to cash the transform 
     [HideInInspector]
     public int playerDragonsLife;
-    [SerializeField]
+
     private Slider playerDragonsLifeBar;
-    [SerializeField]
     private RawImage playerDragonsLifeBarObject;
+
+    [HideInInspector]
+    public bool playerDragonIsDied;
+
+    private WinLoseController winLoseControllerObject;
+    private MenuManager menuManagerObject;
+
+    private void OnEnable()
+    {
+        mainCam = Camera.main;
+        menuManagerObject = FindObjectOfType<MenuManager>();
+        animalTransform = transform;
+        playerDragonRB = GetComponent<Rigidbody>();
+        aimingLinePlayer = GetComponent<LineRenderer>();
+        dirTouchPhaseBegun = false;
+        aimingLinePlayer.enabled = false;
+        aimPoint = new Vector3();
+        jumpPowerFloat = 0;
+        animalIsGrounded = false;
+        facingRight = true;
+        playerDragonsLife = 60;
+        transform.position = new Vector3(-15, 10, 0);
+
+        playerDragonsLifeBarObject = menuManagerObject.playerDragonsLifeBarObject;
+        playerDragonsLifeBarObject.gameObject.SetActive(true);
+
+        playerDragonsLifeBar = playerDragonsLifeBarObject.GetComponentInChildren<Slider>();
+        playerDragonsLifeBar.maxValue = playerDragonsLife;
+        playerDragonsLifeBar.value = playerDragonsLife;
+
+        playerDragonIsDied = false;
+        winLoseControllerObject = FindObjectOfType<WinLoseController>();
+        StartCoroutine(GetPropertiesOfRival(0.1f));
+    }
+
+    IEnumerator GetPropertiesOfRival(float timer)
+    {
+        yield return new WaitForSeconds(timer);
+        CPUDragon = GameObject.FindGameObjectWithTag("Enemy");
+        CPUDragonRigidbody = CPUDragon.GetComponent<Rigidbody>();
+        CPUDragonObject = CPUDragon.GetComponent<CPUDragonController>();
+    }
 
     void animalAngleTwoardFly()
     {
@@ -71,25 +113,11 @@ public class PlayerDragonController : MonoBehaviour
     private void OnCollisionEnter(Collision collision)
     {
         if (collision.gameObject.CompareTag(floorTag)) animalIsGrounded = true;
-        //if (collision.gameObject.CompareTag(enemyHornTag))
-        //{
-        //    Debug.Log("HeeeeeeyPlayer");
-        //    if (CPUDragonRigidbody.velocity.magnitude > 20 && CPUDragonRigidbody.velocity.magnitude <= 40)
-        //    {
-        //        playerDragonsLife -= 5;
-        //        playerDragonsLifeBar.value = playerDragonsLife;
-        //    }
-        //    else if (CPUDragonRigidbody.velocity.magnitude > 40)
-        //    {
-        //        playerDragonsLife -= 9;
-        //        playerDragonsLifeBar.value = playerDragonsLife;
-        //    }
-        //}
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag(enemyHornTag))
+        if (other.CompareTag(enemyHornTag) && !CPUDragonObject.CPUDragonIsDied && !playerDragonIsDied)
         {
             if (CPUDragonRigidbody.velocity.magnitude > 20 && CPUDragonRigidbody.velocity.magnitude <= 40)
             {
@@ -101,7 +129,12 @@ public class PlayerDragonController : MonoBehaviour
                 playerDragonsLife -= 9;
                 playerDragonsLifeBar.value = playerDragonsLife;
             }
-            if (playerDragonsLife <= 0) playerDragonsLifeBarObject.gameObject.SetActive(false);
+            if (playerDragonsLife <= 0)
+            {
+                playerDragonsLifeBarObject.gameObject.SetActive(false);
+                playerDragonIsDied = true;
+                winLoseControllerObject.DetermineTheWinner(false);
+            }
         }
     }
 
@@ -110,34 +143,12 @@ public class PlayerDragonController : MonoBehaviour
         animalIsGrounded = false;
     }
 
-    private void OnEnable()
-    {
-        mainCam = Camera.main;
-        animalTransform = transform;
-        playerDragonRB = GetComponent<Rigidbody>();
-        aimingLinePlayer = GetComponent<LineRenderer>();
-        aimPoint = new Vector3();
-        jumpPowerFloat = 0;
-        animalIsGrounded = false;
-        facingRight = true;
-        playerDragonsLife = 60;
-        playerDragonsLifeBar.maxValue = playerDragonsLife;
-        playerDragonsLifeBar.value = playerDragonsLife;
-
-        StartCoroutine(GetRigidbodyOfRival(0.1f));
-    }
-    IEnumerator GetRigidbodyOfRival(float timer)
-    {
-        yield return new WaitForSeconds(timer);
-        CPUDragon = GameObject.FindGameObjectWithTag("Enemy");
-        CPUDragonRigidbody = CPUDragon.GetComponent<Rigidbody>();
-    }
-
+   
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.touchCount == 1 )
+        if (Input.touchCount == 1 && !playerDragonIsDied)
         {
             Touch _touch = Input.GetTouch(0);
             if (_touch.phase == TouchPhase.Began)
@@ -167,7 +178,7 @@ public class PlayerDragonController : MonoBehaviour
     {
         if (dirTouchPhaseBegun)
         {
-            aimingLinePlayer.enabled = true;
+            if (!aimingLinePlayer.enabled) aimingLinePlayer.enabled = true;
             burstDirection = (endPointOfLine - startPointOfLine)*0.1f;
 
             jumpPowerFloat = burstDirection.magnitude * MAGNITUDE_MULTIPLIER;

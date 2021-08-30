@@ -9,6 +9,7 @@ public class CPUDragonController : MonoBehaviour
 
     private GameObject PlayerDragon; 
     private Rigidbody PlayerDragonRigidbody;
+    private PlayerDragonController playerDragonObject;
 
     //this coordinates are used to estimate the direction of jump of enemys animal
     private Vector3 pointAOfCPU;
@@ -32,13 +33,46 @@ public class CPUDragonController : MonoBehaviour
     private Transform playerDragonTransform; //to cash the transform 
     [HideInInspector]
     public int CPUDragonsLife;
-    [SerializeField]
+
     private Slider CPUDragonsLifeBar;
-    [SerializeField]
     private RawImage CPUDragonsLifeBarObject;
 
-    private bool enemyTurnIsStarted = false; //bool is used to trigger the start and end the attack phases of enemys animal
+    private WinLoseController winLoseControllerObject;
+    private MenuManager menuManagerObject;
 
+    private bool enemyTurnIsStarted = false; //bool is used to trigger the start and end the attack phases of enemys animal
+    [HideInInspector]
+    public bool CPUDragonIsDied = false; //bool is used to trigger the start and end the attack phases of enemys animal
+
+    private void OnEnable()
+    {
+        mainCam = Camera.main;
+        menuManagerObject = FindObjectOfType<MenuManager>();
+        animalIsGrounded = false;
+        CPUDragonRB = GetComponent<Rigidbody>();
+        CPUDragonTransform = gameObject.transform;
+        CPUDragonsLife = 60;
+        transform.position = new Vector3(15,10,0);
+
+        CPUDragonsLifeBarObject = menuManagerObject.CPUDragonsLifeBarObject;
+        CPUDragonsLifeBarObject.gameObject.SetActive(true);
+
+        CPUDragonsLifeBar = CPUDragonsLifeBarObject.GetComponentInChildren<Slider>();
+        CPUDragonsLifeBar.maxValue = CPUDragonsLife;
+        CPUDragonsLifeBar.value = CPUDragonsLife;
+
+        winLoseControllerObject = FindObjectOfType<WinLoseController>();
+        StartCoroutine(GetPropertiesOfRival(0.1f));
+        CPUDragonIsDied = false;
+    }
+    IEnumerator GetPropertiesOfRival(float timer)
+    {
+        yield return new WaitForSeconds(timer);
+        PlayerDragon = GameObject.FindGameObjectWithTag("Player");
+        playerDragonTransform = PlayerDragon.transform;
+        PlayerDragonRigidbody = PlayerDragon.GetComponent<Rigidbody>();
+        playerDragonObject = PlayerDragon.GetComponent<PlayerDragonController>();
+    }
     private void enemyFlip()
     {
         if (playerDragonTransform.position.x > CPUDragonTransform.position.x && facingRight == false)
@@ -80,26 +114,11 @@ public class CPUDragonController : MonoBehaviour
     private void OnCollisionEnter(Collision collision)
     {
         if (collision.gameObject.CompareTag(floorTag)) animalIsGrounded = true;
-
-        //if (collision.gameObject.CompareTag(playerHornTag))
-        //{
-        //    Debug.Log("HeeeeeeyCPU");
-        //    if (PlayerDragonRigidbody.velocity.magnitude > 20 && PlayerDragonRigidbody.velocity.magnitude <= 40)
-        //    {
-        //        CPUDragonsLife -= 5;
-        //        CPUDragonsLifeBar.value = CPUDragonsLife;
-        //    }
-        //    else if (PlayerDragonRigidbody.velocity.magnitude > 40)
-        //    {
-        //        CPUDragonsLife -= 9;
-        //        CPUDragonsLifeBar.value = CPUDragonsLife;
-        //    }
-        //}
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag(playerHornTag))
+        if (other.CompareTag(playerHornTag) && !playerDragonObject.playerDragonIsDied &&!CPUDragonIsDied)
         {
             if (PlayerDragonRigidbody.velocity.magnitude > 20 && PlayerDragonRigidbody.velocity.magnitude <= 40)
             {
@@ -111,7 +130,12 @@ public class CPUDragonController : MonoBehaviour
                 CPUDragonsLife -= 9;
                 CPUDragonsLifeBar.value = CPUDragonsLife;
             }
-            if (CPUDragonsLife <= 0) CPUDragonsLifeBarObject.gameObject.SetActive(false);
+            if (CPUDragonsLife <= 0)
+            {
+                CPUDragonsLifeBarObject.gameObject.SetActive(false);
+                CPUDragonIsDied = true;
+                winLoseControllerObject.DetermineTheWinner(true);
+            }
         }
     }
 
@@ -121,56 +145,42 @@ public class CPUDragonController : MonoBehaviour
         animalIsGrounded = false;
     }
 
-
-    private void OnEnable()
-    {
-        mainCam = Camera.main;
-        animalIsGrounded = false;
-        CPUDragonRB = GetComponent<Rigidbody>();
-        CPUDragonTransform = gameObject.transform;
-        CPUDragonsLife = 60;
-        CPUDragonsLifeBar.maxValue = CPUDragonsLife;
-        CPUDragonsLifeBar.value = CPUDragonsLife;
-        StartCoroutine(GetRigidbodyOfRival(0.1f));
-    }
-    IEnumerator GetRigidbodyOfRival(float timer)
-    {
-        yield return new WaitForSeconds(timer);
-        PlayerDragon = GameObject.FindGameObjectWithTag("Player");
-        playerDragonTransform = PlayerDragon.transform;
-        PlayerDragonRigidbody = PlayerDragon.GetComponent<Rigidbody>();
-    }
-
     // Update is called once per frame
     void Update()
     {
-        if (CPUDragonRB.velocity == Vector3.zero /*&& playersAnimalIsExist*/)
+        if (!CPUDragonIsDied)
         {
-            enemyMovementsController();
+            if (CPUDragonRB.velocity == Vector3.zero && !playerDragonObject.playerDragonIsDied)
+            {
+                enemyMovementsController();
+            }
+            if (animalIsGrounded) enemyFlip();
+            CPUDragonsLifeBarObject.transform.position = mainCam.WorldToScreenPoint(transform.position);
+            //Debug.Log(PlayerDragonRigidbody.velocity.magnitude);
         }
-        if (animalIsGrounded) enemyFlip();
-        CPUDragonsLifeBarObject.transform.position = mainCam.WorldToScreenPoint(transform.position);
-        //Debug.Log(PlayerDragonRigidbody.velocity.magnitude);
     }
 
     private void FixedUpdate()
     {
-        if (enemyTurnIsStarted)
+        if (!CPUDragonIsDied)
         {
-            burstDirection = Vector3.ClampMagnitude(pointBOfCPU - pointAOfCPU, 20);
-            CPUDragonRB.AddForce(burstDirection * Random.Range(1.1f, 3.4f), ForceMode.Impulse);
-            enemyTurnIsStarted = false;
-            StartCoroutine(cancelGroundedState(0.1f));
-        }
+            if (enemyTurnIsStarted)
+            {
+                burstDirection = Vector3.ClampMagnitude(pointBOfCPU - pointAOfCPU, 50);
+                CPUDragonRB.AddForce(burstDirection * Random.Range(1.1f, 3.4f), ForceMode.Impulse);
+                enemyTurnIsStarted = false;
+                StartCoroutine(cancelGroundedState(0.1f));
+            }
 
-        if (!animalIsGrounded)
-        {
-            animalAngleTwoardFly();
-        }
-        else if (CPUDragonRB.velocity == Vector3.zero)
-        {
-            if (CPUDragonTransform.rotation.y > 0) CPUDragonTransform.rotation = Quaternion.Euler(0, 180, 90);
-            else CPUDragonTransform.rotation = Quaternion.Euler(0, 0, 90);
+            if (!animalIsGrounded)
+            {
+                animalAngleTwoardFly();
+            }
+            else if (CPUDragonRB.velocity == Vector3.zero)
+            {
+                if (CPUDragonTransform.rotation.y > 0) CPUDragonTransform.rotation = Quaternion.Euler(0, 180, 90);
+                else CPUDragonTransform.rotation = Quaternion.Euler(0, 0, 90);
+            }
         }
 
     }
