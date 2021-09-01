@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,8 +6,10 @@ using UnityEngine.UI;
 
 public class PlayerDragonController : MonoBehaviour
 {
+    public TrajectoryRenderer Trajectory;
+
     private Rigidbody playerDragonRB;
-    private LineRenderer aimingLinePlayer;
+    //private LineRenderer aimingLinePlayer;
     private bool dirTouchPhaseBegun;
 
     private Camera mainCam;
@@ -49,9 +52,9 @@ public class PlayerDragonController : MonoBehaviour
         menuManagerObject = FindObjectOfType<MenuManager>();
         animalTransform = transform;
         playerDragonRB = GetComponent<Rigidbody>();
-        aimingLinePlayer = GetComponent<LineRenderer>();
+        //aimingLinePlayer = GetComponent<LineRenderer>();
         dirTouchPhaseBegun = false;
-        aimingLinePlayer.enabled = false;
+        //aimingLinePlayer.enabled = false;
         aimPoint = new Vector3();
         jumpPowerFloat = 0;
         animalIsGrounded = false;
@@ -69,6 +72,8 @@ public class PlayerDragonController : MonoBehaviour
         playerDragonIsDied = false;
         winLoseControllerObject = FindObjectOfType<WinLoseController>();
         StartCoroutine(GetPropertiesOfRival(0.1f));
+
+        Trajectory.TurnOnOffLineOfTrajectory(false);
     }
 
     IEnumerator GetPropertiesOfRival(float timer)
@@ -98,12 +103,12 @@ public class PlayerDragonController : MonoBehaviour
     //method to turn players animal forward and back depending where aminig line is now (behind or in front of animal) 
     private void flip()
     {
-        if (aimingLinePlayer.GetPosition(0).x< aimingLinePlayer.GetPosition(1).x && !facingRight)
+        if (animalTransform.position.x<aimPoint.x /*aimingLinePlayer.GetPosition(0).x< aimingLinePlayer.GetPosition(1).x*/ && !facingRight)
         {
             facingRight = true;
             animalTransform.rotation = Quaternion.Euler(0,0,90);
         }
-        else if (aimingLinePlayer.GetPosition(0).x > aimingLinePlayer.GetPosition(1).x && facingRight)
+        else if (animalTransform.position.x > aimPoint.x/*aimingLinePlayer.GetPosition(0).x > aimingLinePlayer.GetPosition(1).x*/ && facingRight)
         {
             facingRight = false;
             animalTransform.rotation = Quaternion.Euler(0, 180, 90);
@@ -148,26 +153,32 @@ public class PlayerDragonController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.touchCount == 1 && !playerDragonIsDied)
+        if (TurnSwitchController.isPlayerTurn)
         {
-            Touch _touch = Input.GetTouch(0);
-            if (_touch.phase == TouchPhase.Began)
+            Vector3 jumpPower = (aimPoint - animalTransform.position) * jumpPowerFloat;
+            if (Input.touchCount == 1 && !playerDragonIsDied)
             {
-                dirTouchPhaseBegun = true;
-                startPointOfLine = _touch.position;
+                Touch _touch = Input.GetTouch(0);
+                if (_touch.phase == TouchPhase.Began)
+                {
+                    dirTouchPhaseBegun = true;
+                    startPointOfLine = _touch.position;
+                    Trajectory.TurnOnOffLineOfTrajectory(true);
+                }
+                if (_touch.phase == TouchPhase.Ended)
+                {
+                    dirTouchPhaseBegun = false;
+                    //aimingLinePlayer.enabled = false;
+                    playerDragonRB.AddForce(jumpPower, ForceMode.Impulse);
+                    Trajectory.TurnOnOffLineOfTrajectory(false);
+                    StartCoroutine(cancelGroundedState(0.1f));
+                }
+                endPointOfLine = _touch.position;
             }
-            if (_touch.phase == TouchPhase.Ended)
-            {
-                dirTouchPhaseBegun = false;
-                aimingLinePlayer.enabled = false;
+            playerDragonsLifeBarObject.transform.position = mainCam.WorldToScreenPoint(transform.position);
 
-                playerDragonRB.AddForce((aimPoint- animalTransform.position) * jumpPowerFloat, ForceMode.Impulse);
-
-                StartCoroutine(cancelGroundedState(0.1f));
-            }
-            endPointOfLine = _touch.position;
+            Trajectory.ShowTrajectoryOfPlayerDragon(animalTransform.position, jumpPower);
         }
-        playerDragonsLifeBarObject.transform.position = mainCam.WorldToScreenPoint(transform.position);
 
         //Debug.Log(CPUDragonRigidbody.velocity.sqrMagnitude);
     }
@@ -178,25 +189,28 @@ public class PlayerDragonController : MonoBehaviour
     {
         if (dirTouchPhaseBegun)
         {
-            if (!aimingLinePlayer.enabled) aimingLinePlayer.enabled = true;
+            //if (!aimingLinePlayer.enabled) aimingLinePlayer.enabled = true;
             burstDirection = (endPointOfLine - startPointOfLine)*0.1f;
 
             jumpPowerFloat = burstDirection.magnitude * MAGNITUDE_MULTIPLIER;
 
             aimPoint = animalTransform.position + new Vector3(animalTransform.position.x+burstDirection.x, animalTransform.position.y + burstDirection.y,0);
 
-            aimingLinePlayer.SetPosition(1, aimPoint);
-            aimingLinePlayer.SetPosition(0, animalTransform.position);
+            //aimingLinePlayer.SetPosition(1, aimPoint);
+            //aimingLinePlayer.SetPosition(0, animalTransform.position);
 
             if (animalIsGrounded) flip();
 
         }
-        if (!animalIsGrounded)
-            animalAngleTwoardFly();
-        else if (playerDragonRB.velocity == Vector3.zero)
-        {
-            if(animalTransform.rotation.y>0) animalTransform.rotation = Quaternion.Euler(0, 180, 90);
-            else animalTransform.rotation = Quaternion.Euler(0, 0, 90);
+        if (TurnSwitchController.isPlayerTurn) {
+            if (!animalIsGrounded)
+                animalAngleTwoardFly();
+            else if (playerDragonRB.velocity == Vector3.zero)
+            {
+                if (animalTransform.rotation.y > 0) animalTransform.rotation = Quaternion.Euler(0, 180, 90);
+                else animalTransform.rotation = Quaternion.Euler(0, 0, 90);
+                TurnSwitchController.isPlayerTurn = false;
+            }
         }
     }
 }

@@ -34,6 +34,8 @@ public class CPUDragonController : MonoBehaviour
     [HideInInspector]
     public int CPUDragonsLife;
 
+    private bool CPUFinishedItsTurn;
+
     private Slider CPUDragonsLifeBar;
     private RawImage CPUDragonsLifeBarObject;
 
@@ -145,14 +147,21 @@ public class CPUDragonController : MonoBehaviour
         animalIsGrounded = false;
     }
 
+    private void finishTheMovementOfCPU() {
+        CPUFinishedItsTurn = true;
+        if (CPUDragonTransform.rotation.y > 0) CPUDragonTransform.rotation = Quaternion.Euler(0, 180, 90);
+        else CPUDragonTransform.rotation = Quaternion.Euler(0, 0, 90);
+    }
+
     // Update is called once per frame
     void Update()
     {
-        if (!CPUDragonIsDied)
+        if (!CPUDragonIsDied && !TurnSwitchController.isPlayerTurn)
         {
-            if (CPUDragonRB.velocity == Vector3.zero && !playerDragonObject.playerDragonIsDied)
+            if (CPUFinishedItsTurn && !playerDragonObject.playerDragonIsDied)
             {
                 enemyMovementsController();
+                CPUFinishedItsTurn = false;
             }
             if (animalIsGrounded) enemyFlip();
             CPUDragonsLifeBarObject.transform.position = mainCam.WorldToScreenPoint(transform.position);
@@ -162,7 +171,7 @@ public class CPUDragonController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (!CPUDragonIsDied)
+        if (!CPUDragonIsDied && !TurnSwitchController.isPlayerTurn)
         {
             if (enemyTurnIsStarted)
             {
@@ -178,8 +187,8 @@ public class CPUDragonController : MonoBehaviour
             }
             else if (CPUDragonRB.velocity == Vector3.zero)
             {
-                if (CPUDragonTransform.rotation.y > 0) CPUDragonTransform.rotation = Quaternion.Euler(0, 180, 90);
-                else CPUDragonTransform.rotation = Quaternion.Euler(0, 0, 90);
+                TurnSwitchController.isPlayerTurn = true;
+                finishTheMovementOfCPU();
             }
         }
 
