@@ -46,6 +46,9 @@ public class PlayerDragonController : MonoBehaviour
     private WinLoseController winLoseControllerObject;
     private MenuManager menuManagerObject;
 
+    private byte PlayerDragonStartedItsMovement; //byte is used to reduce the memory 0 is false 1 is true
+    //private TurnSwitchController switchController;
+
     private void OnEnable()
     {
         mainCam = Camera.main;
@@ -72,8 +75,9 @@ public class PlayerDragonController : MonoBehaviour
         playerDragonIsDied = false;
         winLoseControllerObject = FindObjectOfType<WinLoseController>();
         StartCoroutine(GetPropertiesOfRival(0.1f));
-
+        PlayerDragonStartedItsMovement = 0;
         Trajectory.TurnOnOffLineOfTrajectory(false);
+        //switchController = FindObjectOfType<TurnSwitchController>(); 
     }
 
     IEnumerator GetPropertiesOfRival(float timer)
@@ -146,20 +150,25 @@ public class PlayerDragonController : MonoBehaviour
     IEnumerator cancelGroundedState(float timer) {
         yield return new WaitForSeconds(timer);
         animalIsGrounded = false;
+        PlayerDragonStartedItsMovement = 1;
     }
 
-   
+    private void setTheDragonToLegsAfterGrounding()
+    {
+        if (animalTransform.rotation.y > 0) animalTransform.rotation = Quaternion.Euler(0, 180, 90);
+        else animalTransform.rotation = Quaternion.Euler(0, 0, 90);
+    }
 
     // Update is called once per frame
     void Update()
     {
-        if (TurnSwitchController.isPlayerTurn)
+        if (TurnSwitchController.isPlayerTurn /*&& !PlayerDragonStartedItsMovement*/)
         {
             Vector3 jumpPower = (aimPoint - animalTransform.position) * jumpPowerFloat;
-            if (Input.touchCount == 1 && !playerDragonIsDied)
+            if (Input.touchCount == 1 && !playerDragonIsDied && playerDragonRB.velocity == Vector3.zero)
             {
                 Touch _touch = Input.GetTouch(0);
-                if (_touch.phase == TouchPhase.Began)
+                if (_touch.phase == TouchPhase.Began )
                 {
                     dirTouchPhaseBegun = true;
                     startPointOfLine = _touch.position;
@@ -172,29 +181,28 @@ public class PlayerDragonController : MonoBehaviour
                     playerDragonRB.AddForce(jumpPower, ForceMode.Impulse);
                     Trajectory.TurnOnOffLineOfTrajectory(false);
                     StartCoroutine(cancelGroundedState(0.1f));
+
                 }
                 endPointOfLine = _touch.position;
             }
-            playerDragonsLifeBarObject.transform.position = mainCam.WorldToScreenPoint(transform.position);
 
             Trajectory.ShowTrajectoryOfPlayerDragon(animalTransform.position, jumpPower);
         }
-
+        
+            playerDragonsLifeBarObject.transform.position = mainCam.WorldToScreenPoint(transform.position);
         //Debug.Log(CPUDragonRigidbody.velocity.sqrMagnitude);
     }
-
-
 
     private void FixedUpdate()
     {
         if (dirTouchPhaseBegun)
         {
             //if (!aimingLinePlayer.enabled) aimingLinePlayer.enabled = true;
-            burstDirection = (endPointOfLine - startPointOfLine)*0.1f;
+            burstDirection = (endPointOfLine - startPointOfLine) * 0.1f;
 
             jumpPowerFloat = burstDirection.magnitude * MAGNITUDE_MULTIPLIER;
 
-            aimPoint = animalTransform.position + new Vector3(animalTransform.position.x+burstDirection.x, animalTransform.position.y + burstDirection.y,0);
+            aimPoint = animalTransform.position + new Vector3(animalTransform.position.x + burstDirection.x, animalTransform.position.y + burstDirection.y, 0);
 
             //aimingLinePlayer.SetPosition(1, aimPoint);
             //aimingLinePlayer.SetPosition(0, animalTransform.position);
@@ -202,15 +210,15 @@ public class PlayerDragonController : MonoBehaviour
             if (animalIsGrounded) flip();
 
         }
-        if (TurnSwitchController.isPlayerTurn) {
-            if (!animalIsGrounded)
-                animalAngleTwoardFly();
-            else if (playerDragonRB.velocity == Vector3.zero)
-            {
-                if (animalTransform.rotation.y > 0) animalTransform.rotation = Quaternion.Euler(0, 180, 90);
-                else animalTransform.rotation = Quaternion.Euler(0, 0, 90);
-                TurnSwitchController.isPlayerTurn = false;
-            }
+
+        if (!animalIsGrounded)
+            animalAngleTwoardFly();
+        else if (playerDragonRB.velocity == Vector3.zero && PlayerDragonStartedItsMovement == 1 && TurnSwitchController.isPlayerTurn)
+        {
+            TurnSwitchController.isPlayerTurn = false;
+            PlayerDragonStartedItsMovement = 0;
         }
+
+        if (playerDragonRB.velocity == Vector3.zero && (animalTransform.rotation.eulerAngles.y != 0 || animalTransform.rotation.eulerAngles.y != 180)) setTheDragonToLegsAfterGrounding();
     }
 }

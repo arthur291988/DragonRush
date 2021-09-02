@@ -21,6 +21,12 @@ public class TrajectoryRenderer : MonoBehaviour
         for (int i=0; i < pointOfLine.Length;i++) {
             float time = i * 0.1f;
             pointOfLine[i] = originCoordinates + speedRush * time + Physics.gravity * time * time / 2f;
+
+            if (pointOfLine[i].y <= 0)
+            {
+                LineRenderer.positionCount = i+1;
+                break;
+            }
         }
         LineRenderer.SetPositions(pointOfLine);
     }

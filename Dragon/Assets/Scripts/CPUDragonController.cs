@@ -34,8 +34,6 @@ public class CPUDragonController : MonoBehaviour
     [HideInInspector]
     public int CPUDragonsLife;
 
-    private bool CPUFinishedItsTurn;
-
     private Slider CPUDragonsLifeBar;
     private RawImage CPUDragonsLifeBarObject;
 
@@ -45,6 +43,8 @@ public class CPUDragonController : MonoBehaviour
     private bool enemyTurnIsStarted = false; //bool is used to trigger the start and end the attack phases of enemys animal
     [HideInInspector]
     public bool CPUDragonIsDied = false; //bool is used to trigger the start and end the attack phases of enemys animal
+
+    private byte CPUDragonStartedItsMovement; //byte is used to reduce the memory 0 is false 1 is true
 
     private void OnEnable()
     {
@@ -66,6 +66,7 @@ public class CPUDragonController : MonoBehaviour
         winLoseControllerObject = FindObjectOfType<WinLoseController>();
         StartCoroutine(GetPropertiesOfRival(0.1f));
         CPUDragonIsDied = false;
+        CPUDragonStartedItsMovement = 0;
     }
     IEnumerator GetPropertiesOfRival(float timer)
     {
@@ -106,13 +107,7 @@ public class CPUDragonController : MonoBehaviour
         }
     }
 
-    //method to determine enemys jump direction vectors
-    public void enemyMovementsController()
-    {
-        pointAOfCPU = CPUDragonTransform.position;
-        pointBOfCPU = new Vector3(playerDragonTransform.position.x, playerDragonTransform.position.y + Random.Range(5, 20), playerDragonTransform.position.z);
-        enemyTurnIsStarted = true;
-    }
+   
     private void OnCollisionEnter(Collision collision)
     {
         if (collision.gameObject.CompareTag(floorTag)) animalIsGrounded = true;
@@ -145,10 +140,18 @@ public class CPUDragonController : MonoBehaviour
     {
         yield return new WaitForSeconds(timer);
         animalIsGrounded = false;
+        CPUDragonStartedItsMovement = 1;
+    }
+    //method to determine enemys jump direction vectors
+    public void enemyMovementsController()
+    {
+        pointAOfCPU = CPUDragonTransform.position;
+        pointBOfCPU = new Vector3(playerDragonTransform.position.x, playerDragonTransform.position.y + Random.Range(5, 20), playerDragonTransform.position.z);
+        enemyTurnIsStarted = true;
     }
 
-    private void finishTheMovementOfCPU() {
-        CPUFinishedItsTurn = true;
+    private void setTheDragonToLegsAfterGrounding()
+    {
         if (CPUDragonTransform.rotation.y > 0) CPUDragonTransform.rotation = Quaternion.Euler(0, 180, 90);
         else CPUDragonTransform.rotation = Quaternion.Euler(0, 0, 90);
     }
@@ -158,20 +161,18 @@ public class CPUDragonController : MonoBehaviour
     {
         if (!CPUDragonIsDied && !TurnSwitchController.isPlayerTurn)
         {
-            if (CPUFinishedItsTurn && !playerDragonObject.playerDragonIsDied)
+            if (CPUDragonRB.velocity == Vector3.zero && !playerDragonObject.playerDragonIsDied && CPUDragonStartedItsMovement == 0)
             {
                 enemyMovementsController();
-                CPUFinishedItsTurn = false;
             }
             if (animalIsGrounded) enemyFlip();
-            CPUDragonsLifeBarObject.transform.position = mainCam.WorldToScreenPoint(transform.position);
-            //Debug.Log(PlayerDragonRigidbody.velocity.magnitude);
         }
+        CPUDragonsLifeBarObject.transform.position = mainCam.WorldToScreenPoint(transform.position);
     }
 
     private void FixedUpdate()
     {
-        if (!CPUDragonIsDied && !TurnSwitchController.isPlayerTurn)
+        if (!CPUDragonIsDied )
         {
             if (enemyTurnIsStarted)
             {
@@ -185,12 +186,13 @@ public class CPUDragonController : MonoBehaviour
             {
                 animalAngleTwoardFly();
             }
-            else if (CPUDragonRB.velocity == Vector3.zero)
+            else if (CPUDragonRB.velocity == Vector3.zero && CPUDragonStartedItsMovement == 1 && !TurnSwitchController.isPlayerTurn)
             {
                 TurnSwitchController.isPlayerTurn = true;
-                finishTheMovementOfCPU();
+                CPUDragonStartedItsMovement = 0;
             }
-        }
 
+            if (CPUDragonRB.velocity == Vector3.zero && (CPUDragonTransform.rotation.eulerAngles.y != 0 || CPUDragonTransform.rotation.eulerAngles.y != 180)) setTheDragonToLegsAfterGrounding();
+        }
     }
 }
