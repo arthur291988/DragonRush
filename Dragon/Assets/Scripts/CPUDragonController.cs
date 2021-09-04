@@ -26,7 +26,8 @@ public class CPUDragonController : MonoBehaviour
     public const float MAGNITUDE_MULTIPLIER = 0.05f;
     private float animalAngle;
     private Quaternion animalQuater;
-    private bool animalIsGrounded;
+    [HideInInspector]
+    public bool animalIsGrounded;
     //is used to correctly flip animal direction
     private bool facingRight;
     private Transform CPUDragonTransform; //to cash the transform 
@@ -67,6 +68,9 @@ public class CPUDragonController : MonoBehaviour
         StartCoroutine(GetPropertiesOfRival(0.1f));
         CPUDragonIsDied = false;
         CPUDragonStartedItsMovement = 0;
+
+        GetComponent<MeshRenderer>().material.color = Color.yellow;
+        transform.GetChild(0).GetComponent<MeshRenderer>().material.color = Color.yellow;
     }
     IEnumerator GetPropertiesOfRival(float timer)
     {
@@ -156,6 +160,50 @@ public class CPUDragonController : MonoBehaviour
         else CPUDragonTransform.rotation = Quaternion.Euler(0, 0, 90);
     }
 
+    public float AngleBalistic(float distance, float speedBullet)
+    {
+        //Находим велечину гравитации
+        float gravity = Physics.gravity.magnitude;
+
+        float discr = Mathf.Pow(speedBullet, 4) - 4 * (-gravity * gravity / 4) * (-distance * distance);
+        //Время полёта
+        float t = ((-speedBullet * speedBullet) - Mathf.Sqrt(discr)) / (-gravity * gravity / 2);
+        t = Mathf.Sqrt(t);
+        float th = gravity * t * t / 8;
+        //Угол пушки
+        float angle = 180 * (Mathf.Atan(4 * th / distance) / Mathf.PI);
+
+        //Возрощаем угол
+        return (angle);
+    }
+
+    private Vector3 calculateBestThrowSpeed(Vector3 origin, Vector3 target, float timeToTarget)
+    {
+        // calculate vectors
+        Vector3 toTarget = target - origin;
+        Vector3 toTargetXZ = toTarget;
+        toTargetXZ.y = 0;
+
+        // calculate xz and y
+        float y = toTarget.y;
+        float xz = toTargetXZ.magnitude;
+
+        // calculate starting speeds for xz and y. Physics forumulase deltaX = v0 * t + 1/2 * a * t * t
+        // where a is "-gravity" but only on the y plane, and a is 0 in xz plane.
+        // so xz = v0xz * t => v0xz = xz / t
+        // and y = v0y * t - 1/2 * gravity * t * t => v0y * t = y + 1/2 * gravity * t * t => v0y = y / t + 1/2 * gravity * t
+        float t = timeToTarget;
+        float v0y = y / t + 0.5f * Physics.gravity.magnitude * t;
+        float v0xz = xz / t;
+
+        // create result vector for calculated starting speeds
+        Vector3 result = toTargetXZ.normalized;   // get direction of xz but with magnitude 1
+        result *= v0xz;                    // set magnitude of xz to v0xz (starting speed in xz plane)
+        result.y = v0y;                    // set y to v0y (starting speed of y plane)
+
+        return result;
+    }
+
     // Update is called once per frame
     void Update()
     {
@@ -176,8 +224,10 @@ public class CPUDragonController : MonoBehaviour
         {
             if (enemyTurnIsStarted)
             {
-                burstDirection = Vector3.ClampMagnitude(pointBOfCPU - pointAOfCPU, 50);
-                CPUDragonRB.AddForce(burstDirection * Random.Range(1.1f, 3.4f), ForceMode.Impulse);
+                burstDirection = calculateBestThrowSpeed(pointAOfCPU, pointBOfCPU, 2);
+                //burstDirection = Vector3.ClampMagnitude(pointBOfCPU - pointAOfCPU, 20)* AngleBalistic((pointBOfCPU - pointAOfCPU).sqrMagnitude, Vector3.ClampMagnitude(pointBOfCPU - pointAOfCPU, 20).magnitude) * Random.Range(1.1f, 3.4f);
+                //burstDirection = Vector3.ClampMagnitude(pointBOfCPU - pointAOfCPU, 20)*Random.Range(1.1f, 3.4f);
+                CPUDragonRB.AddForce(burstDirection , ForceMode.Impulse);
                 enemyTurnIsStarted = false;
                 StartCoroutine(cancelGroundedState(0.1f));
             }

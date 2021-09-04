@@ -30,7 +30,8 @@ public class PlayerDragonController : MonoBehaviour
     public const float MAGNITUDE_MULTIPLIER = 0.05f;
     private float animalAngle; 
     private Quaternion animalQuater;
-    private bool animalIsGrounded;
+    [HideInInspector]
+    public bool animalIsGrounded;
     //is used to correctly flip animal direction
     private bool facingRight;
     private Transform animalTransform; //to cash the transform 
@@ -77,6 +78,8 @@ public class PlayerDragonController : MonoBehaviour
         StartCoroutine(GetPropertiesOfRival(0.1f));
         PlayerDragonStartedItsMovement = 0;
         Trajectory.TurnOnOffLineOfTrajectory(false);
+        GetComponent<MeshRenderer>().material.color = Color.green;
+        transform.GetChild(0).GetComponent<MeshRenderer>().material.color = Color.green;
         //switchController = FindObjectOfType<TurnSwitchController>(); 
     }
 
@@ -164,11 +167,13 @@ public class PlayerDragonController : MonoBehaviour
     {
         if (TurnSwitchController.isPlayerTurn /*&& !PlayerDragonStartedItsMovement*/)
         {
-            Vector3 jumpPower = (aimPoint - animalTransform.position) * jumpPowerFloat;
+            //Vector3 jumpPower = (aimPoint - animalTransform.position) * jumpPowerFloat;
+
+            Vector3 jumpPower = Vector3.ClampMagnitude((aimPoint - animalTransform.position) * jumpPowerFloat,100);
             if (Input.touchCount == 1 && !playerDragonIsDied && playerDragonRB.velocity == Vector3.zero)
             {
                 Touch _touch = Input.GetTouch(0);
-                if (_touch.phase == TouchPhase.Began )
+                if (_touch.phase == TouchPhase.Began)
                 {
                     dirTouchPhaseBegun = true;
                     startPointOfLine = _touch.position;
@@ -185,11 +190,10 @@ public class PlayerDragonController : MonoBehaviour
                 }
                 endPointOfLine = _touch.position;
             }
-
             Trajectory.ShowTrajectoryOfPlayerDragon(animalTransform.position, jumpPower);
         }
-        
-            playerDragonsLifeBarObject.transform.position = mainCam.WorldToScreenPoint(transform.position);
+
+        playerDragonsLifeBarObject.transform.position = mainCam.WorldToScreenPoint(transform.position);
         //Debug.Log(CPUDragonRigidbody.velocity.sqrMagnitude);
     }
 
