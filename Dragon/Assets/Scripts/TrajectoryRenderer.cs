@@ -14,9 +14,10 @@ public class TrajectoryRenderer : MonoBehaviour
         LineRenderer = GetComponent<LineRenderer>();
     }
 
-    public void ShowTrajectoryOfPlayerDragon(Vector3 originCoordinates, Vector3 speedRush) {
+    public void ShowTrajectoryOfPlayerDragon(Vector3 originCoordinates, Vector3 speedRush)
+    {
         Vector3[] pointOfLine = new Vector3[50];
-
+        LineRenderer.SetPosition(0, originCoordinates);
         LineRenderer.positionCount = pointOfLine.Length;
         for (int i=0; i < pointOfLine.Length;i++) {
             float time = i * 0.1f;
@@ -31,7 +32,9 @@ public class TrajectoryRenderer : MonoBehaviour
         LineRenderer.SetPositions(pointOfLine);
     }
 
-    public void TurnOnOffLineOfTrajectory(bool turnOn) {
+    public void TurnOnOffLineOfTrajectory(bool turnOn)
+    {
         LineRenderer.enabled = turnOn;
+        LineRenderer.positionCount = 1;
     }
 }

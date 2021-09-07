@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class DragonsBreakController : MonoBehaviour
@@ -19,11 +18,22 @@ public class DragonsBreakController : MonoBehaviour
     private bool breakTimerIsStarted;
 
     private void breakTheDragons() {
-        Vector3 baseDirectionOfFly = (CPUDragonTransform.position - PlayerDragonTransform.position)*30;
-        Vector3 CPUDragonFlyDirection = new Vector3(baseDirectionOfFly.x, baseDirectionOfFly.y*Random.Range(2,7), baseDirectionOfFly.z);
-        Vector3 PlayerDragonFlyDirection = new Vector3(baseDirectionOfFly.x*-1, baseDirectionOfFly.y * Random.Range(2, 7), baseDirectionOfFly.z);
-        CPUDragonRB.AddForce(CPUDragonFlyDirection,ForceMode.Impulse);
-        PlayerDragonRB.AddForce(PlayerDragonFlyDirection, ForceMode.Impulse);
+        float XofCPU = CPUDragonTransform.position.x;
+        float XofPlayer = PlayerDragonTransform.position.x;
+        Vector3 CPUDragonFlyDirection;
+        Vector3 PlayerDragonFlyDirection;
+        if (XofCPU >= XofPlayer)
+        {
+            CPUDragonFlyDirection = new Vector3 (Random.Range(4, 7), Random.Range(2, 7), 0);
+            PlayerDragonFlyDirection = new Vector3(Random.Range(-4, -7), Random.Range(2, 7), 0);
+        }
+        else
+        {
+            CPUDragonFlyDirection = new Vector3(Random.Range(-4, -7), Random.Range(2, 7), 0); ;
+            PlayerDragonFlyDirection = new Vector3(Random.Range(4, 7), Random.Range(2, 7), 0); ;
+        }
+        CPUDragonRB.AddForce(CPUDragonFlyDirection*5,ForceMode.Impulse);
+        PlayerDragonRB.AddForce(PlayerDragonFlyDirection*5, ForceMode.Impulse);
     }
 
     private void stopBurstProcess() {

@@ -169,7 +169,7 @@ public class PlayerDragonController : MonoBehaviour
         {
             //Vector3 jumpPower = (aimPoint - animalTransform.position) * jumpPowerFloat;
 
-            Vector3 jumpPower = Vector3.ClampMagnitude((aimPoint - animalTransform.position) * jumpPowerFloat,100);
+            Vector3 jumpPower = Vector3.ClampMagnitude((aimPoint - animalTransform.position) * jumpPowerFloat,70);
             if (Input.touchCount == 1 && !playerDragonIsDied && playerDragonRB.velocity == Vector3.zero)
             {
                 Touch _touch = Input.GetTouch(0);
@@ -179,7 +179,17 @@ public class PlayerDragonController : MonoBehaviour
                     startPointOfLine = _touch.position;
                     Trajectory.TurnOnOffLineOfTrajectory(true);
                 }
-                if (_touch.phase == TouchPhase.Ended)
+                else if (_touch.phase == TouchPhase.Moved)
+                {
+                    Trajectory.ShowTrajectoryOfPlayerDragon(animalTransform.position, jumpPower);
+                    if (!dirTouchPhaseBegun)
+                    {
+                        dirTouchPhaseBegun = true;
+                        startPointOfLine = _touch.position;
+                        Trajectory.TurnOnOffLineOfTrajectory(true);
+                    }
+                }
+                else if (_touch.phase == TouchPhase.Ended)
                 {
                     dirTouchPhaseBegun = false;
                     //aimingLinePlayer.enabled = false;
@@ -190,7 +200,6 @@ public class PlayerDragonController : MonoBehaviour
                 }
                 endPointOfLine = _touch.position;
             }
-            Trajectory.ShowTrajectoryOfPlayerDragon(animalTransform.position, jumpPower);
         }
 
         playerDragonsLifeBarObject.transform.position = mainCam.WorldToScreenPoint(transform.position);
