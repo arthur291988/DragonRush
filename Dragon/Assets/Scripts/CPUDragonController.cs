@@ -37,6 +37,7 @@ public class CPUDragonController : MonoBehaviour
 
     private Slider CPUDragonsLifeBar;
     private RawImage CPUDragonsLifeBarObject;
+    private Image LifeBarImage;
 
     private WinLoseController winLoseControllerObject;
     private MenuManager menuManagerObject;
@@ -71,6 +72,8 @@ public class CPUDragonController : MonoBehaviour
 
         GetComponent<MeshRenderer>().material.color = Color.yellow;
         transform.GetChild(0).GetComponent<MeshRenderer>().material.color = Color.yellow;
+        LifeBarImage = CPUDragonsLifeBar.transform.GetChild(1).GetComponentInChildren<Image>();
+        LifeBarImage.color = Color.green;
     }
     IEnumerator GetPropertiesOfRival(float timer)
     {
@@ -137,6 +140,18 @@ public class CPUDragonController : MonoBehaviour
                 CPUDragonIsDied = true;
                 winLoseControllerObject.DetermineTheWinner(true);
             }
+            paintTheLifeBar();
+        }
+    }
+    private void paintTheLifeBar()
+    {
+        if (CPUDragonsLife <= 30 && CPUDragonsLife > 10)
+        {
+            LifeBarImage.color = Color.yellow;
+        }
+        else if (CPUDragonsLife <= 10)
+        {
+            LifeBarImage.color = Color.red;
         }
     }
 

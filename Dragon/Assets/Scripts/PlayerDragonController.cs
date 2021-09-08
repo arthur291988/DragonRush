@@ -40,6 +40,7 @@ public class PlayerDragonController : MonoBehaviour
 
     private Slider playerDragonsLifeBar;
     private RawImage playerDragonsLifeBarObject;
+    private Image LifeBarImage;
 
     [HideInInspector]
     public bool playerDragonIsDied;
@@ -80,6 +81,8 @@ public class PlayerDragonController : MonoBehaviour
         Trajectory.TurnOnOffLineOfTrajectory(false);
         GetComponent<MeshRenderer>().material.color = Color.green;
         transform.GetChild(0).GetComponent<MeshRenderer>().material.color = Color.green;
+        LifeBarImage = playerDragonsLifeBar.transform.GetChild(1).GetComponentInChildren<Image>();
+        LifeBarImage.color = Color.green;
         //switchController = FindObjectOfType<TurnSwitchController>(); 
     }
 
@@ -147,6 +150,19 @@ public class PlayerDragonController : MonoBehaviour
                 playerDragonIsDied = true;
                 winLoseControllerObject.DetermineTheWinner(false);
             }
+            paintTheLifeBar();
+        }
+    }
+
+    private void paintTheLifeBar()
+    {
+        if (playerDragonsLife <= 30 && playerDragonsLife > 10)
+        {
+            LifeBarImage.color = Color.yellow;
+        }
+        else if (playerDragonsLife <= 10)
+        {
+            LifeBarImage.color = Color.red;
         }
     }
 
